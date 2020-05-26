@@ -1,0 +1,267 @@
+#installing library
+! pip install PyPDF2
+! pip install textract
+
+# Importing libraries
+# Loading all important packages
+import spacy
+import pandas as pd
+import numpy as np
+import PyPDF2
+import textract
+import difflib as dl
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.feature_extraction.text import TfidfVectorizer
+import nltk
+import re
+import string
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+import glob
+
+# Loading Natural Language processing library
+nlp = spacy.load("en_core_web_md", disable=['parser', 'ner'])
+
+# This is reading all Published files.
+
+# a list of all topics for convinience
+
+topics_list = ["Biomedical Engineering", "Department Operating Policies",
+               "Facility Management","Supply Chain Informatics","Supply Chain Operations","Supply Chain SS &E"]
+
+text= []
+
+# Reading the path for the files.
+mypath = "Biomedical Engineering/Published/"
+for file in glob.glob(mypath + "/*.pdf"):
+
+    if file.endswith('.pdf'):
+        object = PyPDF2.PdfFileReader(open(file, "rb"))
+        NumPages = object.getNumPages()
+        print (NumPages)
+        for i in range(0,NumPages):
+            PageObj = object.getPage(i)
+            a = PageObj.extractText()
+
+            text.append(a)   
+            
+# Checking number of pages in the entire pdf
+len(text)
+# Viewing the read set of published documents.
+text
+
+# Reading all retired documents
+
+text2= []
+NumPages_Retired = []
+File_name_retired = []
+mypath = "Biomedical Engineering/Retired/"
+for file in glob.glob(mypath + "/*.pdf"):
+    
+    if file.endswith('.pdf'):
+        File_name_retired.append(file)
+        object = PyPDF2.PdfFileReader(open(file, "rb"))
+        NumPages = object.getNumPages()
+        print (NumPages)
+        NumPages_Retired.append(NumPages)
+        for i in range(0,NumPages):
+            PageObj = object.getPage(i)
+            b = PageObj.extractText()
+            text2.append(b)
+        
+NumPages_Retired
+len(text2)
+
+# Creating the dataframe of Published documents
+df = pd.DataFrame(data = text)
+df.head()
+
+# Creating the dataframe of Retired documents
+df2 = pd.DataFrame(data = text2)
+df2.head()
+
+# Combining all documents into a set
+X = df[0]
+Y = df2[0]
+
+# A function to clean the data of all unwanted words, punctuations, digits and more.
+
+
+def custom_tokenizer(text):
+    #text = text.sub('\n','', regex=True)
+    regex = re.compile(r"\n")                               
+    text = regex.sub('',text) 
+    #text = text.replace('""','', regex=True)
+    # lower case the text
+    text = text.lower()
+    # replace one or more white-space characters with a space
+    regex = re.compile(r"\s+")                               
+    text = regex.sub(' ', text)        
+    # remove digits and punctuation
+    regex = re.compile(r"[%s%s]" % (string.punctuation, string.digits))
+    text = regex.sub(' ', text)           
+    # remove stop words
+    sw = stopwords.words('english')
+    text = text.split()                                              
+    text = ' '.join([w for w in text if w not in sw]) 
+    # remove short words
+    ' '.join([w for w in text.split() if len(w) >= 2])
+    # lemmatize
+    text = ' '.join([(WordNetLemmatizer()).lemmatize(w) for w in text.split()]) 
+    return text
+    
+# cleaning the data by calling the above method.
+corpus=X.apply(custom_tokenizer)
+
+# Combining all the cleaned data (with only key words)
+corpus = nlp.pipe(corpus)
+clean_corpus = [doc for doc in corpus]
+
+# Set of key words from retired documents.
+corpus2=Y.apply(custom_tokenizer)
+corpus2[2:4]
+
+# Calling a pre-defined method
+sim = dl.get_close_matches
+
+# Function to obtain the similarity
+
+def similarity(published_corpus,data):
+    corpus2 = nlp.pipe(data)
+    clean_corpus2 = [doc for doc in corpus2]
+    s = 0
+    wa = set(str(published_corpus).split())
+    wb = set(str(clean_corpus2).split())
+
+    list_words = []
+    for i in wb:
+        if sim(i, wa):
+            s += 1
+        else:
+            list_words.append(i)
+        
+
+    n = float(s) / float(len(wb))
+    print ('%d%% similarity' % int(n * 100))
+    print("List of words not in published documents")
+    print(list_words
+    
+# Putting all pages of each individual retired document into respective sets
+
+DF_List=list()
+df = pd.DataFrame()
+z = 0
+for i in range(len(NumPages_Retired)):
+    y = NumPages_Retired[i]
+    if (z == 0):
+        df = corpus2[z:y]
+        print(df)
+        z = y
+    else:
+        df = corpus2[z:y+z]
+        print(df)
+        z = y+z
+        
+    DF_List.append(df)
+
+
+# Obtain the similarity of each retired document against the entire set of publshed documents,
+# Obtain the list of dissimilar key words.
+
+for i in range(len(DF_List)):
+    
+    print("Document", File_name_retired[i])
+    similarity(clean_corpus,DF_List[i])
+    print()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+            
+            
+            
